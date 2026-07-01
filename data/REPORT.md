@@ -130,15 +130,9 @@ Le filtrage "hors-sujet" n'est **pas** appliqué automatiquement dans le nettoya
 
 ## 6. Dataset médical (pour l'équipe IA / fine-tuning LoRA)
 
-Le dataset médical annoncé dans `medical_project/Readme.md` **n'est pas fourni dans le repo** — seul un lien HuggingFace (`ruslanmv/ai-medical-chatbot`) est mentionné dans `readme.md`. Script : [`prepare_medical_dataset.py`](prepare_medical_dataset.py) (télécharge + nettoie en une seule commande).
+Préparé avec [`prepare_medical_dataset.py`](prepare_medical_dataset.py) (télécharge + nettoie en une seule commande) : 256 916 lignes source → **246 526 lignes** propres, échantillon de 3000 lignes prêt pour Colab. Aucun signal d'empoisonnement ni de secret détecté (source HuggingFace publique, sans lien avec l'équipe précédente).
 
-- **Source** : 256 916 lignes, colonnes `Description` / `Patient` / `Doctor`.
-- **Nettoyage** : normalisation des espaces unicode (ex. espaces insécables), suppression des lignes vides (0 trouvée), suppression des doublons stricts Patient+Doctor (**10 390 doublons retirés**, ~4% — connu sur ce dataset public).
-- **Résultat** : **246 526 lignes** propres, format `{instruction, input, output}` (identique aux datasets finance), `instruction` = question du patient, `output` = réponse du médecin.
-- **Sorties** :
-  - `cleaned/medical_dataset_cleaned.jsonl` (246 526 lignes, ~250 Mo) — pas inclus dans le repo (trop gros), régénérable en une commande via le script.
-  - `cleaned/medical_dataset_sample_3000.json` (3000 lignes réparties uniformément sur tout le dataset, ~3 Mo) — 250k exemples seraient disproportionnés pour un fine-tuning LoRA en 7h ; 3000 donne un volume raisonnable pour un run rapide tout en restant représentatif. **Copie aussi disponible dans [`../ia/dataset/medical_dataset_sample_3000.json`](../ia/dataset/medical_dataset_sample_3000.json)** pour un accès direct depuis le notebook Colab.
-- Aucun signal d'empoisonnement (marqueur `P0UP33`) ni de secret détecté dans ce dataset — contrairement aux fichiers finance, celui-ci vient directement de la source HuggingFace publique, pas de l'équipe précédente.
+➡️ Rapport dédié complet (méthode, vérifications, fichiers) : [`../ia/rapport-finetuning-medical.md`](../ia/rapport-finetuning-medical.md).
 
 ## 7. Note environnement (pour la suite du hackathon)
 

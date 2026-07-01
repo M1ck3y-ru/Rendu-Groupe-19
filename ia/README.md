@@ -6,7 +6,7 @@
 3000 exemples `{instruction, input, output}` (question patient → réponse
 médecin), nettoyés et échantillonnés depuis `ruslanmv/ai-medical-chatbot` (HF).
 Prêt à charger directement dans le notebook Colab pour le fine-tuning LoRA.
-Détail de la préparation : `../data/REPORT.md` section 6.
+Rapport détaillé : [`rapport-finetuning-medical.md`](rapport-finetuning-medical.md).
 
 ## Modèle financier hérité — ne pas réutiliser tel quel
 
