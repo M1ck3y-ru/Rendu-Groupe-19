@@ -1,5 +1,13 @@
 # IA
 
+## Évaluation fonctionnelle de Phi-3.5-Financial (production)
+
+Rapport : [`rapport-evaluation-phi3-financial.md`](rapport-evaluation-phi3-financial.md).
+Complémentaire aux tests sécurité de CYBER (`../cyber/`) : 3 problèmes de
+fiabilité trouvés sur 12 questions (erreur de calcul sur l'intérêt composé,
+2 hallucinations factuelles). **Déployable, mais pas sans garde-fous** — voir
+le rapport pour le détail et la recommandation.
+
 ## Dataset médical (préparé par DATA)
 
 [`dataset/medical_dataset_sample_3000.json`](dataset/medical_dataset_sample_3000.json) —
