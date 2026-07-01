@@ -9,8 +9,11 @@ Règles de nettoyage appliquées, dans cet ordre :
    (tokens Slack/GitHub, clés Google/SendGrid/AWS...) trouvés dans des tâches
    d'extraction d'entités sans lien avec le marqueur ci-dessus — repéré via
    le push protection de GitHub, qui bloque tout push contenant ces motifs.
-3. Suppression des lignes avec instruction ou output vide.
-4. Suppression des doublons stricts (même instruction + même output).
+3. Suppression des lignes contenant un numéro à 13-19 chiffres valide selon
+   l'algorithme de Luhn (format numéro de carte bancaire), trouvé dans la même
+   famille de tâches d'extraction de PII (factures, ID client...).
+4. Suppression des lignes avec instruction ou output vide.
+5. Suppression des doublons stricts (même instruction + même output).
 
 Le filtrage "hors-sujet" (contenu qui ne parle pas de finance) n'est PAS
 appliqué automatiquement ici : la détection par mots-clés est trop grossière
@@ -42,13 +45,40 @@ POISON_MARKER = "P0UP33"
 
 # Formats de credentials d'apparence réelle (indépendants du marqueur P0UP33) :
 # GitHub bloque le push dès qu'il en détecte, qu'ils soient réels ou synthétiques.
+# Volontairement limité à des formats spécifiques (peu de faux positifs) ; les
+# motifs trop génériques (ex. "Bearer <token>", URL avec user:pass@host) sont
+# exclus de la suppression automatique pour ne pas retirer du contenu légitime.
 REALISTIC_SECRET_RE = re.compile(
     r"xox[baprs]-[0-9A-Za-z-]{10,72}"          # Slack token
     r"|AIza[0-9A-Za-z_\-]{35}"                  # Google API key
     r"|SG\.[A-Za-z0-9_\-]{20,24}\.[A-Za-z0-9_\-]{20,50}"  # SendGrid key
     r"|AKIA[0-9A-Z]{16}"                        # AWS access key id
     r"|gh[pousr]_[A-Za-z0-9]{30,}"               # GitHub token
+    r"|eyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}"  # JWT
+    r"|[sp]k_(live|test)_[0-9a-zA-Z]{16,}"       # Stripe key
+    r"|\bSK[0-9a-fA-F]{32}\b|\bAC[0-9a-fA-F]{32}\b"  # Twilio SID/key
+    r"|BEGIN (RSA |EC |OPENSSH |DSA |)PRIVATE KEY"    # clé privée
+    r"|(postgres|postgresql|mysql|mongodb(\+srv)?|redis)://[^:@/\s]+:[^:@/\s]+@"  # connection string avec creds
+    r"|\bkey-[0-9a-f]{32}\b"                     # Mailgun key
 )
+
+CARD_NUMBER_RE = re.compile(r"\b\d{13,19}\b")
+
+
+def luhn_valid(digits: str) -> bool:
+    total = 0
+    for i, ch in enumerate(reversed(digits)):
+        d = int(ch)
+        if i % 2 == 1:
+            d *= 2
+            if d > 9:
+                d -= 9
+        total += d
+    return total % 10 == 0
+
+
+def contains_card_like_number(text: str) -> bool:
+    return any(luhn_valid(m) for m in CARD_NUMBER_RE.findall(text))
 
 
 def clean(data: list) -> tuple[list, dict]:
@@ -58,6 +88,7 @@ def clean(data: list) -> tuple[list, dict]:
         "input_rows": len(data),
         "removed_poisoned": 0,
         "removed_realistic_secret": 0,
+        "removed_card_like_number": 0,
         "removed_empty": 0,
         "removed_duplicate": 0,
     }
@@ -77,6 +108,10 @@ def clean(data: list) -> tuple[list, dict]:
 
         if REALISTIC_SECRET_RE.search(full_text):
             stats["removed_realistic_secret"] += 1
+            continue
+
+        if contains_card_like_number(full_text):
+            stats["removed_card_like_number"] += 1
             continue
 
         if not instruction or not output:
@@ -112,12 +147,13 @@ def main():
         with open(out_path, "w", encoding="utf-8") as f:
             json.dump(cleaned, f, ensure_ascii=False, indent=2)
 
-        print(f"  Lignes en entrée         : {stats['input_rows']}")
-        print(f"  Retirées (empoisonnées)  : {stats['removed_poisoned']}")
+        print(f"  Lignes en entrée             : {stats['input_rows']}")
+        print(f"  Retirées (empoisonnées)      : {stats['removed_poisoned']}")
         print(f"  Retirées (secrets réalistes) : {stats['removed_realistic_secret']}")
-        print(f"  Retirées (vides)         : {stats['removed_empty']}")
-        print(f"  Retirées (doublons)      : {stats['removed_duplicate']}")
-        print(f"  Lignes en sortie         : {stats['output_rows']}")
+        print(f"  Retirées (numéro carte-like) : {stats['removed_card_like_number']}")
+        print(f"  Retirées (vides)             : {stats['removed_empty']}")
+        print(f"  Retirées (doublons)          : {stats['removed_duplicate']}")
+        print(f"  Lignes en sortie             : {stats['output_rows']}")
         print(f"  Fichier écrit         : {out_path}")
 
 

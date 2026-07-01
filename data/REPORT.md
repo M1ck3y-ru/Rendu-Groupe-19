@@ -70,20 +70,42 @@ piégé) — voir `../cyber/` pour la recommandation de ne pas le déployer.
 
 ### Secrets d'apparence réelle, sans lien avec le marqueur `P0UP33`
 Le premier push de ce dossier a été **bloqué par la protection anti-secrets de
-GitHub** : `test_dataset_16000.json` contient aussi 3 lignes issues d'une tâche
-d'extraction d'entités (JSON à parser), avec un token Slack (`xoxb-...`), une
-clé Google (`AIza...`), une clé SendGrid (`SG...`) et un token GitHub (`ghp_...`)
-— vraisemblablement synthétiques (générés pour l'exercice), mais dans un format
-indistinguable de vrais secrets. `clean_datasets.py` les détecte maintenant et
-les retire (3 lignes en plus des 1000 déjà retirées pour `test_dataset_16000`).
-Confirme, une fois de plus, que ce fichier est un dump générique multi-tâches
-et pas un dataset finance dédié.
+GitHub** : `test_dataset_16000.json` contient aussi des lignes issues d'une
+famille de tâches d'extraction d'entités/PII (JSON ou texte à parser), avec un
+token Slack (`xoxb-...`), une clé Google (`AIza...`), une clé SendGrid (`SG...`),
+un token GitHub (`ghp_...`) et un JWT (`eyJ...`) — vraisemblablement synthétiques
+(générés pour l'exercice), mais dans un format indistinguable de vrais secrets.
+`clean_datasets.py` les détecte maintenant et les retire (4 lignes). La même
+famille de tâches contient aussi des numéros à 13-19 chiffres **valides selon
+l'algorithme de Luhn** (format numéro de carte bancaire) dans des faux
+justificatifs/factures — pas du hasard : sur 159 séquences de 13-16 chiffres
+repérées, 92 passent Luhn (~58%, largement au-dessus du ~10% attendu par pur
+hasard), donc générées intentionnellement au format carte valide. **49 lignes
+retirées** pour ce motif. Confirme, une fois de plus, que ce fichier est un
+dump générique multi-tâches et pas un dataset finance dédié.
+
+Les emails présents dans le fichier (304 uniques) ont aussi été vérifiés :
+tous sur des domaines fabriqués (style générateur Faker — `thakkar.com`,
+`kunda.org`, `example.net`...), aucun domaine d'entreprise réelle reconnu. Pas
+de fuite de PII réelle identifiée.
 
 ### `test_dataset_16000.json` : nom trompeur, contenu majoritairement hors-sujet
 Après retrait des lignes empoisonnées, **59.7% du contenu restant n'a rien à voir avec la finance** (ex. histoire de l'URSS, faits judiciaires, avec des champs anonymisés `NAME_1`, `NAME_2`...). Ce fichier ressemble à un dump générique de conversations (issu d'un autre dataset public anonymisé) mal étiqueté comme dataset de test financier. **Non fiable en l'état comme dataset finance** — à ne pas utiliser tel quel pour valider ou fine-tuner Phi-3.5-Financial.
 
 ### `finance_dataset_final.json` : globalement sain une fois nettoyé
 Après retrait des lignes empoisonnées, seulement 3.4% de contenu hors-sujet, 0 doublon réel, 0 champ vide. **Utilisable.**
+
+### Instructions tronquées de leur contexte multi-tours
+Dans `test_dataset_16000.json`, certaines instructions génériques et courtes
+(ex. `"what is the percent change?"`) apparaissent plusieurs fois avec des
+`output` complètement différents (8 occurrences, 8 valeurs numériques
+distinctes). Ce n'est pas un doublon ni une contradiction : ce sont des
+questions de suivi extraites de conversations multi-tours dont le contexte
+(les valeurs numériques discutées avant) a été perdu lors de l'export au
+format instruction-tuning plat. Pour un fine-tuning, ces lignes sont du bruit
+non appris de façon fiable (même instruction → réponses arbitraires) — encore
+un signe que ce fichier n'est pas un dataset finance conçu pour du
+fine-tuning propre.
 
 ### Faux positif à ne pas relayer tel quel
 Le motif regex "jailbreak" (heuristique prompt-injection) matche aussi le sens littéral "évasion de prison" dans un fait divers — 4 faux positifs dans `test_dataset_16000.json`, aucun lien avec une vraie tentative d'injection de prompt. Vérifié manuellement, pas de prompt injection réelle détectée dans ce que couvrent nos regex.
@@ -93,17 +115,17 @@ L'analyse brute comptait 482 et 988 doublons — mais la quasi-totalité provien
 
 ## 4. Résultat du nettoyage
 
-| Fichier | Entrée | Retirées (empoisonnées) | Retirées (secrets réalistes) | Retirées (vides) | Retirées (doublons) | Sortie |
-|---|---|---|---|---|---|---|
-| finance_dataset_final | 2997 | 497 | 0 | 0 | 0 | **2500** |
-| test_dataset_16000 | 16000 | 1000 | 3 | 23 | 6 | **14968** |
+| Fichier | Entrée | Retirées (empoisonnées) | Retirées (secrets réalistes) | Retirées (numéro carte-like) | Retirées (vides) | Retirées (doublons) | Sortie |
+|---|---|---|---|---|---|---|---|
+| finance_dataset_final | 2997 | 497 | 0 | 0 | 0 | 0 | **2500** |
+| test_dataset_16000 | 16000 | 1000 | 4 | 49 | 23 | 6 | **14918** |
 
 Le filtrage "hors-sujet" n'est **pas** appliqué automatiquement dans le nettoyage (la détection par mots-clés est trop grossière pour supprimer des données de façon fiable) — il est seulement mesuré et rapporté, pour laisser l'équipe IA trancher.
 
 ## 5. Verdict d'usabilité (datasets finance)
 
 - **`finance_dataset_final.json`** : ✅ utilisable après nettoyage (fichier `cleaned/finance_dataset_final_cleaned.json`, 2500 lignes).
-- **`test_dataset_16000.json`** : ⚠️ utilisable partiellement seulement — majoritairement hors-sujet même après nettoyage. À ne pas présenter comme un dataset de test finance sans un tri thématique supplémentaire.
+- **`test_dataset_16000.json`** : ⚠️ utilisable partiellement seulement — majoritairement hors-sujet même après nettoyage, avec des instructions tronquées de leur contexte. À ne pas présenter comme un dataset de test finance sans un tri thématique supplémentaire.
 - **Dans tous les cas** : ne jamais utiliser les fichiers bruts (`datasets/*.json`) tels quels — toujours passer par les versions nettoyées.
 
 ## 6. Dataset médical (pour l'équipe IA / fine-tuning LoRA)
@@ -121,3 +143,26 @@ Le dataset médical annoncé dans `medical_project/Readme.md` **n'est pas fourni
 ## 7. Note environnement (pour la suite du hackathon)
 
 La machine utilisée pour cette analyse tournait à 88-96% de RAM utilisée pendant le traitement (moins de 1 Go de libre par moments), ce qui a causé une `MemoryError` transitoire et un échec d'import de `numpy`/`pandas` (bloqué par la politique de sécurité locale au chargement d'une DLL). Les scripts ci-dessus ont été conçus pour fonctionner **sans pandas/numpy** (stdlib + `pyarrow` uniquement, lecture en streaming par lots) pour rester robustes à cette contrainte. À garder en tête si l'équipe INFRA doit faire tourner Ollama en local sur la même machine plus tard dans la journée.
+
+## 8. Auto-audit — ce qui a été re-vérifié indépendamment
+
+Après le premier push bloqué par GitHub (secrets manqués par la première
+passe de nettoyage), tout le travail a été recontrôlé avec un script d'audit
+séparé (`self_audit.py`, hors repo — recalcule tout depuis les fichiers bruts
+et nettoyés, indépendamment de `clean_datasets.py`) :
+
+| Vérification | Résultat |
+|---|---|
+| Validité JSON des 4 fichiers livrés (bruts + nettoyés) | OK, 0 erreur de parsing, 0 anomalie de schéma |
+| Recalcul indépendant des compteurs (empoisonnées/vides/doublons) | Chiffres confirmés, identiques à ceux de `clean_datasets.py` |
+| Secrets format élargi (Slack, Google, SendGrid, AWS, GitHub, JWT, Stripe, Twilio, clés privées, connection strings) sur les fichiers **livrés** | 0 résiduel après correction |
+| Numéros carte bancaire (Luhn) sur le fichier **livré** | 0 résiduel après correction |
+| Autres marqueurs cachés type leetspeak (au-delà de `P0UP33`) | Aucun trouvé |
+| Doublons inter-fichiers (finance vs test_dataset) | 0 ligne partagée |
+| Dataset médical : secrets élargis + doublons, sur l'échantillon **et** le fichier complet (246 526 lignes) | 0 secret, 0 doublon résiduel |
+| Spot-check manuel de la classification hors-sujet (échantillon de 8 lignes) | Classification globalement correcte ; limite confirmée sur des termes comme "earnings"/"rate per hour" absents des mots-clés finance, classés à tort hors-sujet — cohérent avec la mise en garde déjà émise en section 4 sur cette heuristique |
+
+Deux findings supplémentaires sont sortis de cet auto-audit et ont été
+intégrés au nettoyage (JWT + numéros de carte Luhn-valides, voir section 3) —
+`clean_datasets.py` et les fichiers `cleaned/*.json` de ce repo intègrent déjà
+la version corrigée.
