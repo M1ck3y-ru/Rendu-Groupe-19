@@ -1,0 +1,7 @@
+# Dépendances pour les scripts DATA (analyze_datasets.py, clean_datasets.py,
+# prepare_medical_dataset.py). Volontairement minimal : analyze/clean_datasets.py
+# n'utilisent que la stdlib. pandas/numpy sont évités ici — sur cette machine,
+# leur import plante (DLL bloquée par la politique de sécurité locale) ; pyarrow
+# seul suffit pour lire le parquet du dataset médical.
+pyarrow>=17.0.0
+requests>=2.31.0
