@@ -79,19 +79,26 @@ départ). 3 epochs, split 90/10 train/eval pour suivre la loss de validation.
 
 ## Résultats du fine-tuning
 
-*À remplir après exécution du notebook sur Colab :*
+Entraînement exécuté sur Colab, GPU T4, à partir du notebook
+[`finetuning_medical_lora.ipynb`](finetuning_medical_lora.ipynb).
 
-| Métrique | Valeur |
-|---|---|
-| Lien Colab | *(à compléter)* |
-| Loss finale (train) | *(à compléter)* |
-| Loss finale (eval) | *(à compléter)* |
-| Nombre d'epochs | *(à compléter, 3 par défaut)* |
-| Temps d'entraînement | *(à compléter)* |
-| Observations qualitatives (test sur les questions médicales) | *(à compléter)* |
+| Step | Training Loss | Validation Loss |
+|---|---|---|
+| 100 | 2.397 | 2.376 |
+| 200 | 2.290 | 2.336 |
+| 300 | 2.288 | 2.311 |
+| 400 | 2.228 | 2.303 |
+| 500 | 2.221 | 2.296 |
 
-## À faire côté IA
+- **Epochs** : 3 (config par défaut du notebook), entraînement arrivé à l'étape 507/507 (fin de l'epoch 3/3).
+- **Tendance** : loss d'entraînement et de validation baissent de façon régulière et restent proches l'une de l'autre sur tout l'entraînement — pas de signe de surapprentissage (la loss de validation ne remonte jamais alors que celle d'entraînement continue de baisser).
+- **Lien Colab** : *(à compléter — copier le lien via le bouton "Partager" dans Colab)*
+- **Limite de cette mesure** : la confirmation finale exacte (`trainer.save_model()` + métriques `train_result.metrics`) n'a pas été capturée avant l'arrêt de la session — les chiffres ci-dessus s'arrêtent au dernier point de log observé (étape 500/507), pas au tout dernier pas. Le run est allé jusqu'au bout des 3 epochs prévus ; seule la ligne de métriques finales imprimée par le notebook n'a pas été relevée.
+- **Test qualitatif** : premières réponses du modèle fine-tuné (avant confirmation de fin d'entraînement) affichant des répétitions de mots (ex. "Hi, I am Dr Nayana, I am Dr Nayana,"). À revérifier en relançant la cellule de test après un entraînement confirmé complet — cause probable : absence de `repetition_penalty` dans les paramètres de génération du notebook (`model.generate(...)` section 6), à ajouter si le problème persiste.
 
-- Exécuter [`finetuning_medical_lora.ipynb`](finetuning_medical_lora.ipynb) sur Colab (GPU gratuit) et compléter le tableau ci-dessus
-- Partager le lien Colab — livrable demandé par `CONSIGNES.md`
+## À faire côté IA (si le temps le permet)
+
+- Relancer la cellule "Test rapide" du notebook après confirmation de fin d'entraînement pour valider la qualité des réponses sur un état stable du modèle
+- Si les répétitions persistent : ajouter `repetition_penalty=1.1` à l'appel `model.generate()` (section 6 du notebook) et retester
+- Récupérer et coller ici le lien de partage Colab — livrable demandé par `CONSIGNES.md`
 - Rappel : mission **expérimentale**, ce modèle n'est pas destiné à la production (voir `medical_project/Readme.md` du dépôt source — avertissements sur la validation médicale obligatoire par des professionnels de santé)

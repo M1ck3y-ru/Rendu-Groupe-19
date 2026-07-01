@@ -15,11 +15,11 @@ le rapport pour le détail et la recommandation.
 médecin), nettoyés et échantillonnés depuis `ruslanmv/ai-medical-chatbot` (HF).
 Rapport détaillé : [`rapport-finetuning-medical.md`](rapport-finetuning-medical.md).
 
-**Notebook prêt à l'emploi** : [`finetuning_medical_lora.ipynb`](finetuning_medical_lora.ipynb)
-— à ouvrir dans Google Colab (runtime GPU T4), clone le repo et charge le
-dataset automatiquement, QLoRA sur Phi-3.5-mini-instruct. Après exécution,
-reporter loss/epochs dans `rapport-finetuning-medical.md` et partager le lien
-Colab (livrable demandé par `CONSIGNES.md`).
+**Notebook** : [`finetuning_medical_lora.ipynb`](finetuning_medical_lora.ipynb)
+— exécuté sur Colab (GPU T4) : 3 epochs, loss train/eval en baisse régulière
+sans signe de surapprentissage. Détail des métriques et limites de la mesure
+dans [`rapport-finetuning-medical.md`](rapport-finetuning-medical.md) (section
+Résultats). Lien de partage Colab à compléter dans ce rapport.
 
 ## Modèle financier hérité — ne pas réutiliser tel quel
 
